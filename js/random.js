@@ -1,6 +1,4 @@
-﻿// <reference path="http://code.jquery.com/qunit/qunit-1.14.0.js" />
-
-// Random number generator implementation using Math.random()
+﻿// Random number generator implementation using Math.random()
 function RandomDefault() {
 }
 
