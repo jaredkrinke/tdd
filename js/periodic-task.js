@@ -287,8 +287,41 @@ PeriodicTask.prototype.getStatus = function () {
     return this.getStatusForDate(Date.today());
 };
 
-PeriodicTask.prototype.setDateCompleted = function (dateCompleted) {
+PeriodicTask.prototype.complete = function (dateCompleted) {
+    // Record when the task was completed
     this.properties.dateCompleted = dateCompleted;
+
+    // Advanced the due date according to the period
+    switch (this.properties.period) {
+        case PeriodicTask.period.oneWeek:
+            this.properties.dateDue = this.properties.dateDue.addDays(7);
+            break;
+
+        case PeriodicTask.period.twoWeeks:
+            this.properties.dateDue = this.properties.dateDue.addDays(14);
+            break;
+
+        case PeriodicTask.period.oneMonth:
+            this.properties.dateDue = this.properties.dateDue.addMonths(1);
+            break;
+
+        case PeriodicTask.period.twoMonths:
+            this.properties.dateDue = this.properties.dateDue.addMonths(2);
+            break;
+
+        case PeriodicTask.period.sixMonths:
+            this.properties.dateDue = this.properties.dateDue.addMonths(6);
+            break;
+
+        case PeriodicTask.period.oneYear:
+            this.properties.dateDue = this.properties.dateDue.addYears(1);
+            break;
+
+        default:
+            throw 'Invalid period for task!';
+            break;
+
+    }
 };
 
 module('Periodic tasks');
@@ -332,3 +365,28 @@ test('With due date in 14 days and last completed date in 8 days', function () {
     equal(PeriodicTask.status.pastDue, task.getStatusForDate(Date.today().addDays(20)));
     equal(PeriodicTask.status.wayPastDue, task.getStatusForDate(Date.today().addDays(21)));
 });
+
+test('Updating date completed', function () {
+    var task = new PeriodicTask({
+        period: PeriodicTask.period.oneWeek,
+        dateDue: Date.today().addDays(7),
+        dateCompleted: Date.today()
+    });
+
+    equal(PeriodicTask.status.upToDate, task.getStatus(), 'Task due in a week is up to date');
+    equal(PeriodicTask.status.due, task.getStatusForDate(Date.today().addDays(7)), 'Task is due in a week');
+
+    task.complete(Date.today());
+    equal(PeriodicTask.status.upToDate, task.getStatus(), 'After completing, task is now up to date again');
+    equal(PeriodicTask.status.upToDate, task.getStatusForDate(Date.today().addDays(7)), 'After completing, task is now up to date for a week');
+    equal(PeriodicTask.status.due, task.getStatusForDate(Date.today().addDays(14)), 'After completing, task is now due in two weeks');
+
+    task.complete(Date.today().addDays(15));
+    equal(PeriodicTask.status.upToDate, task.getStatus()), 'After completing again, task is up to date';
+    equal(PeriodicTask.status.upToDate, task.getStatusForDate(Date.today().addDays(7)), 'After completing again, task is up to date for one week');
+    equal(PeriodicTask.status.upToDate, task.getStatusForDate(Date.today().addDays(14)), 'After completing again, task is due in two weeks');
+    equal(PeriodicTask.status.due, task.getStatusForDate(Date.today().addDays(21)), 'After completing again, task is due in three weeks');
+});
+
+// TODO: Test different periods?
+// TODO: Some way to undo the last change (in case it was accidental)
