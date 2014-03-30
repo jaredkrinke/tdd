@@ -5,7 +5,7 @@
     }
 
     var formatDate = function (date) {
-        // TODO: UTC or not?
+        // Note: Using local time
         return [padNumber(date.getFullYear(), 4), padNumber(date.getMonth() + 1, 2), padNumber(date.getDate(), 2)].join('-');
     };
 
@@ -28,7 +28,7 @@
     };
 
     Date.compareDates = function (a, b) {
-        // Note: This is rounding rather than truncating the quotient in an attempt to ignore for leap seconds
+        // Note: This is rounding rather than truncating the quotient in an attempt to ignore leap seconds
         return Math.round((truncateTime(a).getTime() - truncateTime(b).getTime()) / millisecondsPerDay);
     };
 
