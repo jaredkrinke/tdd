@@ -21,6 +21,11 @@
 })();
 
 (function () {
+    // Comparison
+    Date.compare = function (a, b) {
+        return a.getTime() - b.getTime();
+    };
+
     // Creation
     Date.create = function (year, month, day) {
         return new Date(year, month - 1, day);
@@ -179,6 +184,22 @@ test('Day manipulation', function (assert) {
     var date = Date.create(2017, 2, 28);
     assert.dateEqual(date.addDays(2), Date.create(2017, 3, 2), 'Going over a non-leap day');
 });
+test('Date comparisons', function (assert) {
+    var today = Date.today();
+    var tomorrow = Date.today().addDays(1);
+
+    ok(Date.compare(today, Date.today()) === 0, 'Today is the same as today');
+    ok(Date.compare(today, Date.today()) >= 0, 'Today is at least today');
+    ok(Date.compare(today, Date.today()) <= 0, 'Today is at most today');
+    ok(!(Date.compare(today, Date.today()) < 0), 'Today is not before today');
+    ok(!(Date.compare(today, Date.today()) > 0), 'Today is not after today');
+
+    ok(Date.compare(today, tomorrow) !== 0, 'Today is not tomorrow');
+    ok(!(Date.compare(today, tomorrow) >= 0), 'Today is not at least tomorrow');
+    ok(Date.compare(today, tomorrow) <= 0, 'Today is at most tomorrow');
+    ok(Date.compare(today, tomorrow) < 0, 'Today is before tomorrow');
+    ok(!(Date.compare(today, tomorrow) > 0), 'Today is not after tomorrow');
+});
 
 //// Objects with serializable state
 //function ObjectWithState(state) {
@@ -206,42 +227,63 @@ test('Day manipulation', function (assert) {
 //    ObjectWithState.call(this, state);
 //}
 
-//PeriodicTask.period = {
-//    oneWeek: 0,
-//    twoWeeks: 1,
-//    oneMonth: 2,
-//    twoMonths: 3,
-//    sixMonths: 4,
-//    oneYear: 5
-//};
+function PeriodicTask(properties) {
+    this.properties = properties;
+}
 
-//PeriodicTask.status = {
-//    upToDate: 0,
-//    nearDue: 1,
-//    pastDue: 2,
-//    unknown: 3
-//};
+PeriodicTask.period = {
+    oneWeek: 0,
+    twoWeeks: 1,
+    oneMonth: 2,
+    twoMonths: 3,
+    sixMonths: 4,
+    oneYear: 5
+};
 
-//PeriodicTask.prototype.getStatusForDate = function (date) {
-//};
+PeriodicTask.status = {
+    upToDate: 0,
+    nearDue: 1,
+    due: 2,
+    pastDue: 3,
+    wayPastDue: 4,
+    unknown: 5
+};
 
-//PeriodicTask.prototype.getStatus = function () {
-//};
+PeriodicTask.nearPeriodDays = 3;
+PeriodicTask.wayPastPeriodDays = 7;
 
-//module('Periodic tasks');
-//test('No previous date', function () {
-//    var task = new PeriodicTask({
-//        period: PeriodicTask.period.oneWeek
-//    });
+PeriodicTask.prototype.getStatusForDate = function (date) {
+};
 
-//    equal(PeriodicTask.status.unknown, task.getStatus());
-//});
+PeriodicTask.prototype.getStatus = function () {
+    return this.getStatusForDate(Date.today());
+};
 
-//test('Up to date', function () {
-//    var task = new PeriodicTask({
-//        period: PeriodicTask.period.oneWeek,
-//        dateCompleted: Date.now
-//    });
+PeriodicTask.prototype.setDateCompleted = function (dateCompleted) {
+    this.properties.dateCompleted = dateCompleted;
+};
 
-//    equal(PeriodicTask.status.unknown, task.getStatus());
-//});
+module('Periodic tasks');
+test('No previous date', function () {
+    var task = new PeriodicTask({
+        period: PeriodicTask.period.oneWeek
+    });
+
+    equal(PeriodicTask.status.unknown, task.getStatus());
+});
+
+test('With previous date', function () {
+    var task = new PeriodicTask({
+        period: PeriodicTask.period.oneWeek,
+        dateCompleted: new Date()
+    });
+
+    equal(PeriodicTask.status.upToDate, task.getStatus());
+    equal(PeriodicTask.status.upToDate, task.getStatusForDate(Date.today().addDays(3)));
+    equal(PeriodicTask.status.nearDue, task.getStatusForDate(Date.today().addDays(4)));
+    equal(PeriodicTask.status.nearDue, task.getStatusForDate(Date.today().addDays(6)));
+    equal(PeriodicTask.status.due, task.getStatusForDate(Date.today().addDays(7)));
+    equal(PeriodicTask.status.pastDue, task.getStatusForDate(Date.today().addDays(8)));
+    equal(PeriodicTask.status.pastDue, task.getStatusForDate(Date.today().addDays(13)));
+    equal(PeriodicTask.status.wayPastDue, task.getStatusForDate(Date.today().addDays(14)));
+});
