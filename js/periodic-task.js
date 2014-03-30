@@ -22,8 +22,14 @@
 
 (function () {
     // Comparison
-    Date.compare = function (a, b) {
-        return a.getTime() - b.getTime();
+    var millisecondsPerDay = 1000 * 60 * 60 * 24;
+    var truncateTime = function (date) {
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    };
+
+    Date.compareDates = function (a, b) {
+        // Note: This is rounding rather than truncating the quotient in an attempt to ignore for leap seconds
+        return Math.round((truncateTime(a).getTime() - truncateTime(b).getTime()) / millisecondsPerDay);
     };
 
     // Creation
@@ -188,17 +194,21 @@ test('Date comparisons', function (assert) {
     var today = Date.today();
     var tomorrow = Date.today().addDays(1);
 
-    ok(Date.compare(today, Date.today()) === 0, 'Today is the same as today');
-    ok(Date.compare(today, Date.today()) >= 0, 'Today is at least today');
-    ok(Date.compare(today, Date.today()) <= 0, 'Today is at most today');
-    ok(!(Date.compare(today, Date.today()) < 0), 'Today is not before today');
-    ok(!(Date.compare(today, Date.today()) > 0), 'Today is not after today');
+    ok(Date.compareDates(today, Date.today()) === 0, 'Today is the same as today');
+    ok(Date.compareDates(today, Date.today()) >= 0, 'Today is at least today');
+    ok(Date.compareDates(today, Date.today()) <= 0, 'Today is at most today');
+    ok(!(Date.compareDates(today, Date.today()) < 0), 'Today is not before today');
+    ok(!(Date.compareDates(today, Date.today()) > 0), 'Today is not after today');
 
-    ok(Date.compare(today, tomorrow) !== 0, 'Today is not tomorrow');
-    ok(!(Date.compare(today, tomorrow) >= 0), 'Today is not at least tomorrow');
-    ok(Date.compare(today, tomorrow) <= 0, 'Today is at most tomorrow');
-    ok(Date.compare(today, tomorrow) < 0, 'Today is before tomorrow');
-    ok(!(Date.compare(today, tomorrow) > 0), 'Today is not after tomorrow');
+    ok(Date.compareDates(today, tomorrow) !== 0, 'Today is not tomorrow');
+    ok(!(Date.compareDates(today, tomorrow) >= 0), 'Today is not at least tomorrow');
+    ok(Date.compareDates(today, tomorrow) <= 0, 'Today is at most tomorrow');
+    ok(Date.compareDates(today, tomorrow) < 0, 'Today is before tomorrow');
+    ok(!(Date.compareDates(today, tomorrow) > 0), 'Today is not after tomorrow');
+
+    var someDate = Date.create(2014, 3, 30);
+    var someDateWithTime = new Date(2014, 2, 30, 11, 40, 23, 103);
+    equal(Date.compareDates(someDate, someDateWithTime), 0, 'Dates with different times are equivalent');
 });
 
 //// Objects with serializable state
@@ -256,13 +266,16 @@ PeriodicTask.prototype.getStatusForDate = function (date) {
     // TODO: Shouldn't this just compute the number of days difference instead of doing a bunch of addition/comparisons?
     var dateDue = this.properties.dateDue;
     if (dateDue) {
-        if (Date.compare(date.addDays(PeriodicTask.nearPeriodDays), dateDue) < 0) {
+        var daysUntilDue = Date.compareDates(dateDue, date);
+        if (daysUntilDue > PeriodicTask.nearPeriodDays) {
             return PeriodicTask.status.upToDate;
-        } else if (Date.compare(date, dateDue) < 0) {
+        } else if (daysUntilDue > 0) {
             return PeriodicTask.status.nearDue;
-        } else if (Date.compare(date, dateDue.addDays(PeriodicTask.nearPeriodDays)) < 0) {
+        } else if (daysUntilDue === 0) {
             return PeriodicTask.status.due;
-        } else if (Date.compare(date, dateDue.addDays(PeriodicTask.wayPastPeriodDays)) < 0) {
+        } else if (daysUntilDue > -PeriodicTask.wayPastPeriodDays) {
+            return PeriodicTask.status.pastDue;
+        } else {
             return PeriodicTask.status.wayPastDue;
         }
     }
