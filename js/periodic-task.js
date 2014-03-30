@@ -90,7 +90,6 @@
         return Date.create(endingYear, endingMonth, endingDay);
     };
 
-    // TODO: Implement
     Date.prototype.addDays = function (days) {
         // Note that this could be made more efficient when handling >= 1 year's worth of days
         var endingYear = this.year();
