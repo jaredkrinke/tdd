@@ -253,6 +253,21 @@ PeriodicTask.nearPeriodDays = 3;
 PeriodicTask.wayPastPeriodDays = 7;
 
 PeriodicTask.prototype.getStatusForDate = function (date) {
+    // TODO: Shouldn't this just compute the number of days difference instead of doing a bunch of addition/comparisons?
+    var dateDue = this.properties.dateDue;
+    if (dateDue) {
+        if (Date.compare(date.addDays(PeriodicTask.nearPeriodDays), dateDue) < 0) {
+            return PeriodicTask.status.upToDate;
+        } else if (Date.compare(date, dateDue) < 0) {
+            return PeriodicTask.status.nearDue;
+        } else if (Date.compare(date, dateDue.addDays(PeriodicTask.nearPeriodDays)) < 0) {
+            return PeriodicTask.status.due;
+        } else if (Date.compare(date, dateDue.addDays(PeriodicTask.wayPastPeriodDays)) < 0) {
+            return PeriodicTask.status.wayPastDue;
+        }
+    }
+
+    return PeriodicTask.status.unknown;
 };
 
 PeriodicTask.prototype.getStatus = function () {
@@ -264,7 +279,7 @@ PeriodicTask.prototype.setDateCompleted = function (dateCompleted) {
 };
 
 module('Periodic tasks');
-test('No previous date', function () {
+test('No due date', function () {
     var task = new PeriodicTask({
         period: PeriodicTask.period.oneWeek
     });
@@ -272,18 +287,35 @@ test('No previous date', function () {
     equal(PeriodicTask.status.unknown, task.getStatus());
 });
 
-test('With previous date', function () {
+test('With due date in one week', function () {
     var task = new PeriodicTask({
         period: PeriodicTask.period.oneWeek,
-        dateCompleted: new Date()
+        dateDue: Date.today().addDays(7)
+    });
+
+    equal(PeriodicTask.status.upToDate, task.getStatus(), 'Up to date for one week');
+    equal(PeriodicTask.status.upToDate, task.getStatusForDate(Date.today().addDays(3)), 'Up to date for 3 days');
+    equal(PeriodicTask.status.nearDue, task.getStatusForDate(Date.today().addDays(4)), 'Near due for 4 days');
+    equal(PeriodicTask.status.nearDue, task.getStatusForDate(Date.today().addDays(6)), 'Near due for 6 days');
+    equal(PeriodicTask.status.due, task.getStatusForDate(Date.today().addDays(7)), 'Due for 7 days');
+    equal(PeriodicTask.status.pastDue, task.getStatusForDate(Date.today().addDays(8)), 'Past due for 8 days');
+    equal(PeriodicTask.status.pastDue, task.getStatusForDate(Date.today().addDays(13)), 'Past due for 13 days');
+    equal(PeriodicTask.status.wayPastDue, task.getStatusForDate(Date.today().addDays(14)), 'Way past due for 14 days');
+});
+
+test('With due date in 14 days and last completed date in 8 days', function () {
+    var task = new PeriodicTask({
+        period: PeriodicTask.period.oneWeek,
+        dateDue: Date.today().addDays(14),
+        dateCompleted: Date.today().addDays(8)
     });
 
     equal(PeriodicTask.status.upToDate, task.getStatus());
-    equal(PeriodicTask.status.upToDate, task.getStatusForDate(Date.today().addDays(3)));
-    equal(PeriodicTask.status.nearDue, task.getStatusForDate(Date.today().addDays(4)));
-    equal(PeriodicTask.status.nearDue, task.getStatusForDate(Date.today().addDays(6)));
-    equal(PeriodicTask.status.due, task.getStatusForDate(Date.today().addDays(7)));
-    equal(PeriodicTask.status.pastDue, task.getStatusForDate(Date.today().addDays(8)));
-    equal(PeriodicTask.status.pastDue, task.getStatusForDate(Date.today().addDays(13)));
-    equal(PeriodicTask.status.wayPastDue, task.getStatusForDate(Date.today().addDays(14)));
+    equal(PeriodicTask.status.upToDate, task.getStatusForDate(Date.today().addDays(10)));
+    equal(PeriodicTask.status.nearDue, task.getStatusForDate(Date.today().addDays(11)));
+    equal(PeriodicTask.status.nearDue, task.getStatusForDate(Date.today().addDays(13)));
+    equal(PeriodicTask.status.due, task.getStatusForDate(Date.today().addDays(14)));
+    equal(PeriodicTask.status.pastDue, task.getStatusForDate(Date.today().addDays(15)));
+    equal(PeriodicTask.status.pastDue, task.getStatusForDate(Date.today().addDays(20)));
+    equal(PeriodicTask.status.wayPastDue, task.getStatusForDate(Date.today().addDays(21)));
 });
